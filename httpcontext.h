@@ -24,7 +24,7 @@
 
 #include "extension.h"
 
-class HTTPContext
+class HTTPContext : public IHTTPContext
 {
 public:
 	HTTPContext(const ke::AString &method, const ke::AString &url, json_t *data,
@@ -32,13 +32,13 @@ public:
 		long connectTimeout, long followLocation, long timeout);
 	~HTTPContext();
 
+public: // IHTTPContext
 	void OnCompleted();
 
-	CURL *curl;
+private:
 	struct HTTPRequest request;
 	struct HTTPResponse response;
 
-private:
 	struct curl_slist *headers;
 	IChangeableForward *forward;
 	cell_t value;
