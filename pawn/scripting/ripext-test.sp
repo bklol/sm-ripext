@@ -29,12 +29,16 @@ public void OnPluginStart()
     HTTPClient hHTTPClient = new HTTPClient("https://nghttp2.org/httpbin");
     JSONObject hJSONObject = CreateJSONObject();
 
+    char sImagePath[PLATFORM_MAX_PATH];
+    BuildPath(Path_SM, sImagePath, sizeof(sImagePath), "data/ripext-test.jpg");
+
     hHTTPClient.Get("get", OnHTTPResponse, 0);
     hHTTPClient.Post("post", hJSONObject, OnHTTPResponse, 1);
     hHTTPClient.Put("put", hJSONObject, OnHTTPResponse, 2);
     hHTTPClient.Patch("patch", hJSONObject, OnHTTPResponse, 3);
     hHTTPClient.Delete("delete", OnHTTPResponse, 4);
     hHTTPClient.Get("gzip", OnHTTPResponse, 5);
+    hHTTPClient.DownloadFile("image/jpeg", sImagePath, OnImageDownloaded);
 
     delete hJSONObject;
 }
@@ -54,6 +58,16 @@ public void OnHTTPResponse(HTTPResponse response, any value)
     response.Data.ToString(sData, sizeof(sData), JSON_INDENT(4));
 
     PrintToServer("[OK] %s Response:\n%s", sHTTPTags[value], sData);
+}
+
+public void OnImageDownloaded(HTTPStatus status, any value)
+{
+    if (status != HTTPStatus_OK) {
+        PrintToServer("[ERR] Download Status: %d", status);
+        return;
+    }
+
+    PrintToServer("[OK] Download Complete");
 }
 
 JSONObject CreateJSONObject()
