@@ -150,10 +150,23 @@ methodmap JSONObject < JSON
 	// @return           True on success, false on failure.
 	public native bool Clear();
 
+	// Creates an iterator of the object's keys. See JSONObjectKeys.
+	public native JSONObjectKeys Keys();
+
 	// Retrieves the size of the object.
 	property int Size {
 		public native get();
 	}
+};
+
+methodmap JSONObjectKeys < Handle
+{
+	// Reads an object key, then advances to the next key if any.
+	//
+	// @param buffer     String buffer to store key.
+	// @param maxlength  Maximum length of the string buffer.
+	// @return           True on success, false if there are no more keys.
+	public native bool GetKey(char[] buffer, int maxlength);
 };
 
 methodmap JSONArray < JSON

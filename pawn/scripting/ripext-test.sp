@@ -36,7 +36,15 @@ public void OnPluginStart()
     hHTTPClient.Delete("delete", OnHTTPResponse, 4);
     hHTTPClient.Get("gzip", OnHTTPResponse, 5);
 
+    JSONObjectKeys hJSONObjectKeys = hJSONObject.Keys();
+    char sKey[64];
+
+    while (hJSONObjectKeys.GetKey(sKey, sizeof(sKey))) {
+        PrintToServer("Key: %s", sKey);
+    }
+
     delete hJSONObject;
+    delete hJSONObjectKeys;
 }
 
 public void OnHTTPResponse(HTTPResponse response, any value)
