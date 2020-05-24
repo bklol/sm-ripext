@@ -19,12 +19,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "httpcontext.h"
+#include "httprequestcontext.h"
 
 static size_t ReadRequestBody(void *body, size_t size, size_t nmemb, void *userdata)
 {
 	size_t total = size * nmemb;
-	struct HTTPRequest *request = (struct HTTPRequest *)userdata;
+	HTTPRequestContext *request = (HTTPRequestContext *)userdata;
 	size_t to_copy = (request->size - request->pos < total) ? request->size - request->pos : total;
 
 	memcpy(body, &(request->body[request->pos]), to_copy);
@@ -74,10 +74,10 @@ static size_t ReceiveResponseHeader(char *buffer, size_t size, size_t nmemb, voi
 	return total;
 }
 
-HTTPContext::HTTPContext(const ke::AString &method, const ke::AString &url, json_t *data,
+HTTPRequestContext::HTTPRequestContext(const ke::AString &method, const ke::AString &url, json_t *data,
 	struct curl_slist *headers, IChangeableForward *forward, cell_t value,
 	long connectTimeout, long followLocation, long timeout)
-	: request(method, url, data), headers(headers), forward(forward), value(value)
+	: headers(headers), forward(forward), value(value)
 {
 	curl = curl_easy_init();
 	if (curl == NULL)
@@ -86,22 +86,28 @@ HTTPContext::HTTPContext(const ke::AString &method, const ke::AString &url, json
 		return;
 	}
 
-	if (request.method.compare("POST") == 0)
+	if (data)
+	{
+		body = json_dumps(data, 0);
+		size = (body == NULL) ? 0 : strlen(body);
+	}
+
+	if (method.compare("POST") == 0)
 	{
 		curl_easy_setopt(curl, CURLOPT_POST, 1L);
 	}
-	else if (request.method.compare("PUT") == 0)
+	else if (method.compare("PUT") == 0)
 	{
 		curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 	}
-	else if (request.method.compare("PATCH") == 0)
+	else if (method.compare("PATCH") == 0)
 	{
-		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request.method.chars());
+		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method.chars());
 		curl_easy_setopt(curl, CURLOPT_POST, 1L);
 	}
-	else if (request.method.compare("DELETE") == 0)
+	else if (method.compare("DELETE") == 0)
 	{
-		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, request.method.chars());
+		curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method.chars());
 	}
 
 	curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
@@ -115,25 +121,25 @@ HTTPContext::HTTPContext(const ke::AString &method, const ke::AString &url, json
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 	curl_easy_setopt(curl, CURLOPT_PIPEWAIT, 1L);
 	curl_easy_setopt(curl, CURLOPT_PRIVATE, this);
-	curl_easy_setopt(curl, CURLOPT_READDATA, &request);
+	curl_easy_setopt(curl, CURLOPT_READDATA, this);
 	curl_easy_setopt(curl, CURLOPT_READFUNCTION, &ReadRequestBody);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-	curl_easy_setopt(curl, CURLOPT_URL, request.url.chars());
+	curl_easy_setopt(curl, CURLOPT_URL, url.chars());
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &WriteResponseBody);
 }
 
-HTTPContext::~HTTPContext()
+HTTPRequestContext::~HTTPRequestContext()
 {
 	forwards->ReleaseForward(forward);
 
 	curl_easy_cleanup(curl);
 	curl_slist_free_all(headers);
-	free(request.body);
+	free(body);
 	free(response.body);
 }
 
-void HTTPContext::OnCompleted()
+void HTTPRequestContext::OnCompleted()
 {
 	/* Return early if the plugin was unloaded while the thread was running */
 	if (forward->GetFunctionCount() == 0)

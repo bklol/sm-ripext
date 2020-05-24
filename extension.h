@@ -66,26 +66,6 @@ struct CurlContext {
 	uv_poll_t poll_handle;
 };
 
-struct HTTPRequest {
-	HTTPRequest(const ke::AString &method, const ke::AString &url, json_t *data = NULL)
-		: method(method), url(url), data(data), body(NULL), pos(0), size(0)
-	{
-		if (data != NULL)
-		{
-			body = json_dumps(data, 0);
-			size = (body == NULL) ? 0 : strlen(body);
-		}
-	}
-
-	const ke::AString method;
-	const ke::AString url;
-	json_t *data;
-
-	char *body;
-	size_t pos;
-	size_t size;
-};
-
 struct HTTPResponse {
 	HTTPResponse() : status(0), data(NULL), hndlData(BAD_HANDLE), body(NULL), size(0) {}
 
